@@ -9,7 +9,7 @@ class Snake:
     MAX_BOOST_COUNT : int = 4
     MIN_BOOST_LEN   : int = 35
 
-    def __init__(self, position: vec2, color: tuple[int, int, int]):
+    def __init__(self, position: vec2, color: Tuple[int, int, int]):
         # Posicion, direccion y radio de la cabeza (y por lo tanto de todo su cuerpo)
         self.head_pos = position
         self.head_radius: int = 5
@@ -21,7 +21,7 @@ class Snake:
         self.velocity = vec2()
 
         # Cuerpo
-        self.tail: list[vec2] = [vec2() for _ in range(50)]
+        self.tail: List[vec2] = [vec2() for _ in range(50)]
         self.color = color
 
     def update(self, delta_time: float):

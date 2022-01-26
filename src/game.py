@@ -18,9 +18,12 @@ class GameData:
     apples: Set[Apple] = field(default_factory=set)
 
 class Game:
-    # Dimensiones y color de la pantalla
-    X = 1350
-    Y = 700
+    # Dimensiones de la pantalla
+    X = 3000
+    Y = 3000
+    # Dimensiones de la camara
+    CAMERA_X = 1024
+    CAMERA_Y = 512
     BG_COLOR = (0, 0, 0)
     # Numero maximo de manzanas
     MAX_APPLES = 100
@@ -49,8 +52,8 @@ class Game:
         """
             Agrega una nueva manzana en la pantalla con una posicion aleatoria.
         """
-        x = randint(10, self.X-10)
-        y = randint(10, self.Y-10)
+        x = randint(self.CAMERA_X / 2, self.CAMERA_X / 2 + self.X)
+        y = randint(self.CAMERA_Y / 2, self.CAMERA_Y / 2 + self.Y)
         self.add_apple(x, y)
 
     def is_loser(self, uid):
@@ -58,7 +61,8 @@ class Game:
             Verifica si un usuario queda descalificado.
         """
         x, y = self.players[uid].head_pos
-        return x < 0 or x > self.X or y < 0 or y > self.Y
+        return x < self.CAMERA_X / 2 or x > self.CAMERA_X / 2 + self.X or \
+            y < self.CAMERA_Y / 2 or y > self.CAMERA_Y / 2 + self.Y
 
     def update(self, delta_time: float):
         """

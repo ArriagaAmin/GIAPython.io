@@ -42,8 +42,8 @@ class PythonIO:
         """
         # Obtenemos una posicion aleatoria
         new_position = vec2(
-            randint(0, int(cls.game.X / 2)),
-            randint(0, int(cls.game.Y))
+            randint(Game.CAMERA_X / 2 + 10, Game.CAMERA_X / 2 + Game.X / 2),
+            randint(Game.CAMERA_Y / 2 + 10, Game.CAMERA_Y / 2 + Game.Y)
         )
         # Creamos una nueva serpiente
         new_snake = Snake(
