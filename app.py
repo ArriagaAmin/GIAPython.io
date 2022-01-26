@@ -1,4 +1,6 @@
 # Utilidades
+import json
+from typing import *
 from random import randint
 from threading import Thread
 
@@ -13,6 +15,10 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+# Cargamos las variables de entorno
+with open('.env.json', 'r') as f:
+    ENV = json.load(f)
+
 class PythonIO:
     """
         Clase que sirve como wrapper del juego, permitiendo modificar la partida desde
@@ -26,19 +32,9 @@ class PythonIO:
     id = 0
 
     @classmethod
-    def new_snake(cls, client: str) -> str:
+    def new_snake(cls, client: str, color: Tuple[int, int, int]) -> str:
         """
             Agrega a un nuevo jugador.
-
-            Parametros:
-            -----------
-                * client: str
-                    Endpoint del jugador
-
-            Return:
-            -------
-                * str
-                    ID del jugador
         """
         # Obtenemos una posicion aleatoria
         new_position = vec2(
@@ -46,10 +42,7 @@ class PythonIO:
             randint(Game.CAMERA_Y / 2 + 10, Game.CAMERA_Y / 2 + Game.Y)
         )
         # Creamos una nueva serpiente
-        new_snake = Snake(
-            new_position,
-            (randint(0, 255), randint(0, 255), randint(0, 255))
-        )
+        new_snake = Snake(new_position, color)
         # Agregamos al jugador
         cls.game.players[str(cls.id)] = new_snake
         cls.game.clients[str(cls.id)] = client
@@ -78,7 +71,7 @@ class PythonIO:
         cls.game.players[id].boosting = w
         cls.game.players[id].heading += (
             (d - a) * cls.game.players[id].TURN_SPEED
-            * cls.game.delta_time
+            * cls.game.DELTA_TIME
         )
 
 app = Flask(__name__)
@@ -91,7 +84,10 @@ def new_player():
     endpoint = f'http://{client}:{port}'
 
     # Agregamos al jugador
-    id = PythonIO.new_snake(endpoint)
+    R = int(request.values.get('R'))
+    G = int(request.values.get('G'))
+    B = int(request.values.get('B'))
+    id = PythonIO.new_snake(endpoint, (R, G, B))
     data = {'id': id}
     return data
 
@@ -111,5 +107,5 @@ def update():
 
     return {'status': game_over}
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0")
+if __name__ == '__main__':
+    app.run(host=ENV['SERVER_IP'], port=ENV['SERVER_PORT'])

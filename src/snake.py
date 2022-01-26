@@ -1,13 +1,18 @@
+import json
 from typing import *
 from src.apple import Apple
 from pygame import gfxdraw, Surface, Vector2 as vec2
 
+# Cargamos las variables de entorno
+with open('.env.json', 'r') as f:
+    ENV = json.load(f)
+
 class Snake:
-    SPEED           : float = 100.0
-    TURN_SPEED      : float = 150.0
-    BOOST_SPEED     : float = 140.0
-    MAX_BOOST_COUNT : int = 4
-    MIN_BOOST_LEN   : int = 35
+    SPEED           : float = ENV['SPEED']
+    TURN_SPEED      : float = ENV['TURN_SPEED']
+    BOOST_SPEED     : float = ENV['BOOST_SPEED']
+    MAX_BOOST_COUNT : int = ENV['MAX_BOOST_COUNT']
+    MIN_BOOST_LEN   : int = ENV['MIN_BOOST_LEN']
 
     def __init__(self, position: vec2, color: Tuple[int, int, int]):
         # Posicion, direccion y radio de la cabeza (y por lo tanto de todo su cuerpo)
@@ -24,7 +29,7 @@ class Snake:
         self.tail: List[vec2] = [vec2() for _ in range(50)]
         self.color = color
 
-    def update(self, delta_time: float):
+    def update(self):
         """
             Actualiza la posicion de la serpiente
         """
@@ -48,7 +53,7 @@ class Snake:
         else:
             speed = self.SPEED
         self.velocity.from_polar((speed, self.heading))
-        self.head_pos += self.velocity * delta_time
+        self.head_pos += self.velocity * ENV['DELTA_TIME']
 
     def eat(self):
         """

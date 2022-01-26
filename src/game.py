@@ -1,3 +1,4 @@
+import json
 import pickle
 import requests
 from typing import *
@@ -9,6 +10,10 @@ from pygame import Vector2 as vec2
 from src.snake import Snake
 from src.apple import Apple
 
+# Cargamos las variables de entorno
+with open('.env.json', 'r') as f:
+    ENV = json.load(f)
+
 @dataclass
 class GameData:
     """
@@ -19,19 +24,22 @@ class GameData:
 
 class Game:
     # Dimensiones de la pantalla
-    X = 3000
-    Y = 3000
+    X = ENV['WORLD_X']
+    Y = ENV['WORLD_Y']
+
     # Dimensiones de la camara
-    CAMERA_X = 1024
-    CAMERA_Y = 512
-    BG_COLOR = (0, 0, 0)
+    CAMERA_X = ENV['CAMERA_X']
+    CAMERA_Y = ENV['CAMERA_Y']
+    BG_COLOR = tuple(ENV['BG_COLOR'])
+
     # Numero maximo de manzanas
-    MAX_APPLES = 100
-    APPLE_TIME_SPAWM = 2
+    MAX_APPLES = ENV['MAX_APPLES']
+    APPLE_TIME_SPAWM = ENV['APPLE_TIME_SPAWN']
+
+    DELTA_TIME = ENV['DELTA_TIME']
 
     def __init__(self):
         # Llevamos un contador del tiempo actual
-        self.clock = time()
         self.apple_clock = time()
 
         # Datos del juego
@@ -40,7 +48,8 @@ class Game:
         self.apples: Set[Apple] = set()
 
         # Creamos varias manzanas
-        for _ in range(10): self.add_random_apple()
+        for _ in range(ENV['INITIAL_APPLES']): 
+            self.add_random_apple()
 
     def add_apple(self, x: int, y: int):
         """
@@ -82,12 +91,12 @@ class Game:
 
         return game_over
 
-    def update(self, delta_time: float):
+    def update(self):
         """
             Actualiza un frame del juego.
         """
         # Actualizamos cada jugador
-        for uid in self.players: self.players[uid].update(delta_time)
+        for uid in self.players: self.players[uid].update()
 
         # Verificamos que jugadores perdieron y cuales se comieron alguna manzana
         losers= set()
@@ -147,8 +156,4 @@ class Game:
         """
             Mantiene el juego actualizandose indefinidamente
         """
-        while True:
-            new_time = time()
-            self.delta_time = new_time - self.clock
-            self.clock = new_time
-            self.update(self.delta_time)
+        while True: self.update()
