@@ -60,9 +60,27 @@ class Game:
         """
             Verifica si un usuario queda descalificado.
         """
+        # La serpiente muere si se sale del mapa.
         x, y = self.players[uid].head_pos
-        return x < self.CAMERA_X / 2 or x > self.CAMERA_X / 2 + self.X or \
-            y < self.CAMERA_Y / 2 or y > self.CAMERA_Y / 2 + self.Y
+        if x < self.CAMERA_X / 2 or x > self.CAMERA_X / 2 + self.X or \
+            y < self.CAMERA_Y / 2 or y > self.CAMERA_Y / 2 + self.Y:
+            return True
+
+        # La serpiente muere si choca con el cuerpo de otra serpiente
+        game_over = False
+        r = self.players[uid].head_radius
+        for uid_s in self.players:
+            if uid != uid_s:
+                # Verificamos si la cabeza de la serpiente choca con algun segmento de
+                # la s-esima serpiente
+                r_2 = (self.players[uid_s].head_radius + r) ** 2
+                for (x_s, y_s) in self.players[uid_s].tail[3:]:
+                    if (x - x_s)**2 + (y - y_s)**2 < r_2:
+                        game_over = True 
+                        break 
+                if game_over: break
+
+        return game_over
 
     def update(self, delta_time: float):
         """
