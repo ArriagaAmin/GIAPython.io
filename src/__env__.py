@@ -9,6 +9,7 @@ X          : int = ENV['WORLD_X']
 Y          : int = ENV['WORLD_Y']
 CAMERA_X   : int = ENV['CAMERA_X']
 CAMERA_Y   : int = ENV['CAMERA_Y']
+RATE       : int = ENV['RATE']
 DELTA_TIME : float = ENV['DELTA_TIME']
 BG_COLOR   : Tuple[int, int, int] = tuple(ENV['BG_COLOR'])
 

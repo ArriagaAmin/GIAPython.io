@@ -1,5 +1,6 @@
 # Utilities
 from uuid import UUID
+from random import randint
 from typing import Tuple, List, Set
 
 # Game
@@ -125,7 +126,10 @@ class Snake(object):
         for i in range(len(self.boddy)):
             if i % 10 == 0:
                 x, y = self.boddy[i].pos
-                apples.add((x, y))
+                apples.add((
+                    randint(x-self.radius, x+self.radius), 
+                    randint(y-self.radius, y+self.radius)
+                ))
         return apples
 
     def draw(self, window: Surface):

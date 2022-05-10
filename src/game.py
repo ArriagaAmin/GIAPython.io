@@ -8,7 +8,7 @@ from src.snake import Snake
 from src.collisions import CollisionHandler
 from src.GameObject import Apple, SnakeBoddy
 from src.__env__ import X, Y, CAMERA_X, CAMERA_Y, MAX_APPLES, \
-    APPLE_TIME_SPAWM, INITIAL_APPLES
+    APPLE_TIME_SPAWM, INITIAL_APPLES, RATE
 
 
 class Rate(object):
@@ -116,8 +116,12 @@ class Game(object):
 
         # La serpiente muere si choca contra otra serpiente
         snake_collision : List[SnakeBoddy] = self.collisions.collision_with(head, 'Snake')
-        if any(str(obj.snake_id) != str(uuid) for obj in snake_collision): 
-            return True
+        print(len(snake_collision))
+        for obj in snake_collision:
+            if obj.snake_id not in self.players:
+                self.collisions.delete(obj)
+            elif str(obj.snake_id) != str(uuid):
+                return True
 
         return False
 
@@ -151,6 +155,11 @@ class Game(object):
             for apple in self.players[uuid].death_apples():
                 self.add_apple(*apple)
 
+            # Eliminamos todos los segmentos de la serpiente del manejador de
+            # colisiones
+            for segment in self.players[uuid].boddy:
+                self.collisions.delete(segment)
+
             self.players.pop(uuid)
             self.clients.pop(uuid)
 
@@ -177,11 +186,11 @@ class Game(object):
 
         return gd
 
-    def run(self, hz: int=25):
+    def run(self):
         """
             Mantiene el juego actualizandose indefinidamente
         """
-        rate = Rate(hz)
+        rate = Rate(RATE)
         t0 = time()
         count = 0
         while True: 

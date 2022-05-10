@@ -5,6 +5,8 @@
 import socket
 import struct
 import pickle
+import numpy as np
+from PIL import Image
 from uuid import uuid4
 from typing import Tuple 
 from random import randint
@@ -16,7 +18,7 @@ from pygame import gfxdraw
 from src.snake import Snake
 from src.game import Game, GameData, Rate
 from src.__env__ import DELTA_TIME, X, CAMERA_X, Y, CAMERA_Y, CAPTION, \
-    BG_COLOR, TURN_SPEED
+    BG_COLOR, TURN_SPEED, RATE
 
 def __recvall(sock: socket.socket, n: int) -> bytearray:
     # Helper function to recv n bytes or return None if EOF is hit
@@ -176,6 +178,8 @@ class Client(object):
         self.server_port = server_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((server_ip, server_port))
+        self.interface_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.interface_socket.connect((self.server_ip, self.server_port))
         self.graphic = graphic 
         self.color = color
         self.game_over = 0
@@ -233,6 +237,13 @@ class Client(object):
             (0, 0), 
             (x - CAMERA_X / 2, y - CAMERA_Y / 2, CAMERA_X, CAMERA_Y)
         )
+        
+        # Convertimos la imagen en un archivo
+        imgdata = pygame.surfarray.array3d(self.window)
+        imgdata = np.swapaxes(imgdata, 0, 1)
+        img = Image.fromarray(imgdata, 'RGB')
+        img.save('screenshot.png')
+
         pygame.display.flip()
 
     def __run_interface(self):
@@ -241,14 +252,15 @@ class Client(object):
         world : GameData = pickle.loads(recv_msg(self.interface_socket))
 
         while not self.game_over:
-            self.__draw(world)
+            if self.graphic: self.__draw(world)
             send_msg(self.interface_socket, pickle.dumps({'request': 'World'}))
             world : GameData = pickle.loads(recv_msg(self.interface_socket))
             self.game_over = self.id not in world.snakes_id
 
         # Game over
-        pygame.display.quit()
-        pygame.quit()
+        if self.graphic:
+            pygame.display.quit()
+            pygame.quit()
 
     def run(self):
         """
@@ -265,31 +277,32 @@ class Client(object):
             self.game_over = 0
 
             if self.graphic:
-                self.interface_socket = socket.socket(
-                    socket.AF_INET, 
-                    socket.SOCK_STREAM
-                )
-                self.interface_socket.connect((self.server_ip, self.server_port))
                 self.window = pygame.display.set_mode((CAMERA_X, CAMERA_Y))
                 self.background = pygame.Surface((X + CAMERA_X, Y + CAMERA_Y))
                 pygame.display.set_caption(CAPTION)
                 
-                # Creamos un hilo para la interfaz
-                th = Thread(target=self.__run_interface)
-                th.start()
+            # Creamos un hilo para la interfaz
+            th = Thread(target=self.__run_interface)
+            th.start()
 
-            rate = Rate(50)
+            rate = Rate(2 * RATE)
             while not self.game_over:
                 # Obtenemos las teclas presionadas
+                # Aqui es donde iria la accion de la IA
                 keys = pygame.key.get_pressed()
+                press_a, press_d, press_w = (
+                    keys[pygame.K_a], 
+                    keys[pygame.K_d], 
+                    keys[pygame.K_w]
+                )
 
                 # Actualizamos nuestra serpiente
                 data = {
                     'request': 'Update',
                     'id': self.id,
-                    'press_a': keys[pygame.K_a],
-                    'press_d': keys[pygame.K_d],
-                    'press_w': keys[pygame.K_w]
+                    'press_a': press_a,
+                    'press_d': press_d,
+                    'press_w': press_w
                 }
                 send_msg(self.socket, pickle.dumps(data))
 
