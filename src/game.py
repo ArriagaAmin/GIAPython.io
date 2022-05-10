@@ -1,159 +1,197 @@
-import json
-import pickle
-import requests
-from typing import *
-from time import time
+from uuid import UUID
 from random import randint
+from time import time, sleep
+from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
-from pygame import Vector2 as vec2
 
 from src.snake import Snake
-from src.apple import Apple
+from src.collisions import CollisionHandler
+from src.GameObject import Apple, SnakeBoddy
+from src.__env__ import X, Y, CAMERA_X, CAMERA_Y, MAX_APPLES, \
+    APPLE_TIME_SPAWM, INITIAL_APPLES
 
-# Cargamos las variables de entorno
-with open('.env.json', 'r') as f:
-    ENV = json.load(f)
+
+class Rate(object):
+    """
+        Convenience class for sleeping in a loop at a specified rate
+
+        Reference:
+            https://github.com/strawlab/ros_comm/blob/master/clients/rospy/src/rospy/timer.py
+    """
+    
+    def __init__(self, hz: int):
+        """
+            Constructor.
+            @param hz: hz rate to determine sleeping
+            @type  hz: int
+        """
+        self.last_time = time()
+        self.sleep_dur = 1 / hz
+
+    def sleep(self):
+        """
+            Attempt sleep at the specified rate. sleep() takes into
+            account the time elapsed since the last successful
+            sleep().
+            
+            @raise ROSInterruptException: if ROS time is set backwards or if
+            ROS shutdown occurs before sleep completes
+        """
+        curr_time = time()
+        # detect time jumping backwards
+        if self.last_time > curr_time:
+            self.last_time = curr_time
+
+        # calculate sleep interval
+        elapsed = curr_time - self.last_time
+        sleep(max(0, self.sleep_dur - elapsed))
+        self.last_time += self.sleep_dur
+
+        # detect time jumping forwards, as well as loops that are
+        # inherently too slow
+        if curr_time - self.last_time > self.sleep_dur * 2:
+            self.last_time = curr_time
 
 @dataclass
-class GameData:
+class GameData(object):
     """
         Almacena los datos del juego necesarios para poder dibujar la escena.
     """
-    snakes: Dict[str, Snake] = field(default_factory=dict)
-    apples: Set[Apple] = field(default_factory=set)
+    circles: List[Tuple[
+        Tuple[int, int],    # Centro
+        int,                # Radio
+        Tuple[int, int, int]# Color
+    ]] = field(default_factory=list)
+    snakes_id: Dict[str, Tuple[int, int]] = field(default_factory=dict)
 
-class Game:
-    # Dimensiones de la pantalla
-    X = ENV['WORLD_X']
-    Y = ENV['WORLD_Y']
-
-    # Dimensiones de la camara
-    CAMERA_X = ENV['CAMERA_X']
-    CAMERA_Y = ENV['CAMERA_Y']
-    BG_COLOR = tuple(ENV['BG_COLOR'])
-
-    # Numero maximo de manzanas
-    MAX_APPLES = ENV['MAX_APPLES']
-    APPLE_TIME_SPAWM = ENV['APPLE_TIME_SPAWN']
-
-    DELTA_TIME = ENV['DELTA_TIME']
-
+class Game(object):
     def __init__(self):
         # Llevamos un contador del tiempo actual
         self.apple_clock = time()
 
         # Datos del juego
-        self.players: Dict[str, Snake] = {}
+        self.players: Dict[UUID, Snake] = {}
         self.clients: Dict[str, str] = {}
-        self.apples: Set[Apple] = set()
+        self.apples: Dict[UUID, Apple] = {}
+
+        # Inicializamos el manejador de colisiones
+        self.collisions = CollisionHandler()
 
         # Creamos varias manzanas
-        for _ in range(ENV['INITIAL_APPLES']): 
+        for _ in range(INITIAL_APPLES): 
             self.add_random_apple()
 
     def add_apple(self, x: int, y: int):
         """
             Agrega una nueva manzana al juego.
         """
-        self.apples.add(Apple((x, y)))
+        apple = Apple((x, y))
+        self.collisions.add(apple)
+        self.apples[apple.id] = apple
+
+    def remove_apple(self, apple: Apple):
+        """
+            Elimina una manzana del juego
+        """
+        self.collisions.delete(apple)
+        self.apples.pop(apple.id)
 
     def add_random_apple(self):
         """
             Agrega una nueva manzana en la pantalla con una posicion aleatoria.
         """
-        x = randint(self.CAMERA_X / 2, self.CAMERA_X / 2 + self.X)
-        y = randint(self.CAMERA_Y / 2, self.CAMERA_Y / 2 + self.Y)
+        x = randint(CAMERA_X / 2, CAMERA_X / 2 + X)
+        y = randint(CAMERA_Y / 2, CAMERA_Y / 2 + Y)
         self.add_apple(x, y)
 
-    def is_loser(self, uid):
+    def is_loser(self, head: SnakeBoddy, uuid: UUID):
         """
             Verifica si un usuario queda descalificado.
         """
         # La serpiente muere si se sale del mapa.
-        x, y = self.players[uid].head_pos
-        if x < self.CAMERA_X / 2 or x > self.CAMERA_X / 2 + self.X or \
-            y < self.CAMERA_Y / 2 or y > self.CAMERA_Y / 2 + self.Y:
+        x, y = head.pos
+        if x < CAMERA_X / 2 or x > CAMERA_X / 2 + X or \
+            y < CAMERA_Y / 2 or y > CAMERA_Y / 2 + Y:
             return True
 
-        # La serpiente muere si choca con el cuerpo de otra serpiente
-        game_over = False
-        r = self.players[uid].head_radius
-        for uid_s in self.players:
-            if uid != uid_s:
-                # Verificamos si la cabeza de la serpiente choca con algun segmento de
-                # la s-esima serpiente
-                r_2 = (self.players[uid_s].head_radius + r) ** 2
-                for (x_s, y_s) in self.players[uid_s].tail[3:]:
-                    if (x - x_s)**2 + (y - y_s)**2 < r_2:
-                        game_over = True 
-                        break 
-                if game_over: break
+        # La serpiente muere si choca contra otra serpiente
+        snake_collision : List[SnakeBoddy] = self.collisions.collision_with(head, 'Snake')
+        if any(str(obj.snake_id) != str(uuid) for obj in snake_collision): 
+            return True
 
-        return game_over
+        return False
 
     def update(self):
         """
             Actualiza un frame del juego.
         """
         # Actualizamos cada jugador
-        for uid in self.players: self.players[uid].update()
+        for uuid in self.players: self.players[uuid].update()
 
         # Verificamos que jugadores perdieron y cuales se comieron alguna manzana
-        losers= set()
-        for uid in self.players:
+        losers = set()
+        for uuid in self.players:
+            head = self.players[uuid].boddy[0]
+
             # Verificamos si el jugador perdio
-            if self.is_loser(uid):
-                losers.add(uid)
+            if self.is_loser(head, uuid):
+                losers.add(uuid)
                 continue
-            
-            x, y = self.players[uid].head_pos
-            r_2 = self.players[uid].head_radius ** 2
 
             # Verificamos que manzanas se comio
-            eaten = set()
-            for apple in self.apples:
-                if apple in eaten: continue
+            eaten = self.collisions.collision_with(head, 'Apple')
 
-                # Solo tenemos que usar la formula de la circunferencia para saber si
-                # una manzana esta dentro de la cabeza de una serpiente
-                x_a, y_a = apple.pos
-                if (x_a - x) ** 2 + (y_a - y) ** 2 < r_2:
-                    self.players[uid].eat()
-                    eaten.add(apple)
-
-            # Eliminamos las manzanas que se comieron
+            # Eliminamos las manzanas comidas
             for apple in eaten:
-                self.apples.discard(apple)
+                self.remove_apple(apple)
+                self.players[uuid].eat()
         
-        # Verificamos si se debe spanear una nueva manzana
+        for uuid in losers:
+            # Agregamos las manzanas generadas por la muerte de la serpiente
+            for apple in self.players[uuid].death_apples():
+                self.add_apple(*apple)
+
+            self.players.pop(uuid)
+            self.clients.pop(uuid)
+
+        # Verificamos si se debe spawmear una nueva manzana
         diff_time = time() - self.apple_clock
-        if diff_time > self.APPLE_TIME_SPAWM and len(self.apples) < self.MAX_APPLES:
+        if diff_time > APPLE_TIME_SPAWM and len(self.apples) < MAX_APPLES:
             self.apple_clock = time()
             self.add_random_apple()
 
-        # Eliminamos los jugadores que perdieron
-        for uid in losers:
-            # Agregamos las manzanas generadas por la muerte de la serpiente
-            self.apples = self.apples.union(self.players[uid].death_apples())
+    def get_data(self) -> GameData:
+        """
+            Obtiene los datos para dibujar el mapa del juego
+        """
+        gd = GameData()
 
-            # Enviamos un game_over al jugador
-            try: requests.post(self.clients[uid] + '/game_over', timeout=0.15)
-            except: pass
-            self.players.pop(uid)
-            self.clients.pop(uid)
+        for apple_id in self.apples:
+            apple = self.apples[apple_id]
+            gd.circles.append((apple.pos, apple.radius, apple.color))
 
+        for snake_id in self.players:
+            gd.snakes_id[snake_id] = self.players[snake_id].boddy[0].pos
+            for segment in self.players[snake_id].boddy:
+                gd.circles.append((segment.pos, segment.radius, segment.color))
 
-        # Enviamos el estado del juego a cada jugador
-        data = pickle.dumps(GameData(self.players, self.apples), protocol=2)
+        return gd
 
-        try:
-            for c in self.clients:
-                try: requests.post(self.clients[c] + '/draw', data, timeout=0.15)
-                except: pass
-        except: pass
-
-    def run(self):
+    def run(self, hz: int=25):
         """
             Mantiene el juego actualizandose indefinidamente
         """
-        while True: self.update()
+        rate = Rate(hz)
+        t0 = time()
+        count = 0
+        while True: 
+            self.update()
+
+            if count == 99:
+                tf = time()
+                print(f'Executting {count / (tf - t0)} steps by second.')
+                count = 0
+                t0 = tf
+            else:
+                count += 1
+            rate.sleep()
