@@ -3,21 +3,25 @@
 ## **Instalacion**
 
  1. Creamos y activamos un entorno virtual
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
  2. Instalamos las dependencias en el entorno virtual
+
 ```bash
 pip3 install -r requirements.txt
 ```
 
 ## **Servidor**
 
-Para correr el servidor primero debe asegurarse de que en el archivo `.env.json` el campo
-`SERVER_IP` corresponde con la `IP` donde el servidor deberia estar montado, generalmente
-la `IP` local, por ejemplo `"192.168.1.106"`. Luego puede simplemente ejecutar
+Para correr el servidor primero debe asegurarse de que en el archivo 
+`.env.json` el campob`SERVER_IP` corresponde con la `IP` donde el servidor 
+deberia estar montado. Puede colocar `"0.0.0.0"` para usar la `IP` local
+Luego puede simplemente ejecutar
+
 ```bash
 python3 app.py
 ```
@@ -31,21 +35,36 @@ simplemente ejecutar
 ```bash
 python3 play.py [OPTIONS]
 ```
+
 Siguiendo la siguiente sintaxis:
 
 ```
-python3 play.py [-h] [-p PORT] [-n] [-c CHANNEL CHANNEL CHANNEL]
+python3  play.py [-h] [-n] [-c CHANNEL CHANNEL CHANNEL] [-i FILENAME] IP PORT
+
+Corre un ciente de python.io
+
+positional arguments:
+  IP                    Server IP.
+  PORT                  Server port.
 
 optional arguments:
-  -h, --help            
-                        Muestra este mensaje de ayuda y finaliza la ejecucion.
-  -p PORT, --port PORT  
-                        Puerto a traves del cual se ejecuta el cliente. (default: 4269)
-  -n, --no_graphic      
-                        No se muestra una ventana grafica.
+  -h, --help            show this help message and exit
+  -n, --no-interface    No se muestra una interfaz. (default: True)
   -c CHANNEL CHANNEL CHANNEL, --color CHANNEL CHANNEL CHANNEL
-                        Permite establecer un color RGB a la serpiente. Si no se especifica,
-                        se elige un color aleatorio.
+                        Permite establecer un color a la serpiente. 
+                        (default: None)
+  -i FILENAME, --image FILENAME
+                        Archivo donde se guardara la iamgen de cada frame. 
+                        (default: images/screenshot.png)
+```
+
+## **Observador**
+
+Debido a que cada jugador solo puede observar una seccion del mapa, se creo
+un observador capaz de ver el mapa entero. Su sintaxis es:
+
+```bash
+python3 watcher.py SERVER_IP SERVER_PORT
 ```
 
 ## **Juego**
