@@ -191,6 +191,18 @@ class Game(object):
             Mantiene el juego actualizandose indefinidamente
         """
         rate = Rate(RATE)
+        count = 0
+        begin_time = time()
+
         while True: 
-            self.update()
+            try: self.update()
+            except: continue
             rate.sleep()
+
+            if count == RATE * 60:
+                vel = RATE * 60 / (time() - begin_time)
+                print(f'Executing approximately {vel} steps per second.')
+                count = 0
+                begin_time = time()
+            else:
+                count += 1

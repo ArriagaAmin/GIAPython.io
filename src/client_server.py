@@ -53,6 +53,9 @@ class Server(object):
         Servidor que mantiene al juego actualizado
     """
     def __init__(self, ip: str, port: int):
+        self.ip = ip 
+        self.port = port 
+
         # Creamos el juego y hacemos que se mantenga actualizado en un hilo distinto
         self.game = Game()
         th = Thread(target=self.game.run)
@@ -158,6 +161,7 @@ class Server(object):
         """
             Se mantiene escuchando a la espera de nuevos jugadores
         """
+        print(f'Running server in socket: \033[1m{self.ip}:{self.port}\033[0m')
         self.socket.listen()
         while True:
             conn, addr = self.socket.accept()
@@ -402,7 +406,7 @@ class Watcher(object):
         self.background = pygame.Surface((X + CAMERA_X, Y + CAMERA_Y))
 
         fig = plt.figure()
-        ani = animation.FuncAnimation(fig, self.__draw, interval=50, blit=True)
+        ani = animation.FuncAnimation(fig, self.__draw, interval=10, blit=True)
         plt.show()
 
 
