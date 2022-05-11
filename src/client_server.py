@@ -6,6 +6,8 @@ import socket
 import struct
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from PIL import Image
 from uuid import uuid4
 from typing import Tuple 
@@ -249,12 +251,15 @@ class Client(object):
             pygame.display.flip()
 
     def __run_interface(self):
+        """
+            Mantiene actualizada la interfaz del juego
+        """
         # Obtenemos los datos del mundo
         send_msg(self.interface_socket, pickle.dumps({'request': 'World'}))
         world : GameData = pickle.loads(recv_msg(self.interface_socket))
 
         while not self.game_over:
-            if self.graphic: self.__draw(world)
+            self.__draw(world)
             send_msg(self.interface_socket, pickle.dumps({'request': 'World'}))
             world : GameData = pickle.loads(recv_msg(self.interface_socket))
             self.game_over = self.id not in world.snakes_id
@@ -278,10 +283,12 @@ class Client(object):
 
             self.game_over = 0
 
-            self.window = pygame.display.set_mode((CAMERA_X, CAMERA_Y))
             self.background = pygame.Surface((X + CAMERA_X, Y + CAMERA_Y))
             if self.graphic:
+                self.window = pygame.display.set_mode((CAMERA_X, CAMERA_Y))
                 pygame.display.set_caption(CAPTION)
+            else:
+                self.window = pygame.Surface((CAMERA_X, CAMERA_Y))
                 
             # Creamos un hilo para la interfaz
             th = Thread(target=self.__run_interface)
@@ -317,6 +324,86 @@ class Client(object):
             if response == 'n' or response == 'N': break
 
         send_msg(self.socket, pickle.dumps({'request': 'Shutdown'}))
+
+class Watcher(object):
+    """
+        Cliente para observar todo el mapa de juego
+    """
+    def __init__(self, server_ip: str, server_port: int):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((server_ip, server_port))
+        self.first = True
+
+        # Iniciamos pygame
+        pygame.init()
+
+        self.clock = pygame.time.Clock()
+
+    def __draw(self, *args):
+        """
+            Dibuja la interfaz del juego
+        """
+        send_msg(self.socket, pickle.dumps({'request': 'World'}))
+        world : GameData = pickle.loads(recv_msg(self.socket))
+
+        min_x = CAMERA_X / 2 - 25
+        min_y = CAMERA_Y / 2 - 25
+        max_x = min_x + X + 30
+        max_y = min_y + Y + 30
+        self.background.fill(BG_COLOR)
+
+        for circle in world.circles:
+            gfxdraw.filled_circle(
+                self.background,
+                int(circle[0][0]),
+                int(circle[0][1]),
+                circle[1],
+                circle[2],
+            )
+
+        # Dibujamos el fondo y un marco
+        gfxdraw.box(
+            self.background,
+            (min_x, min_y, X + 40, 20),
+            (255, 255, 255)
+        )
+        gfxdraw.box(
+            self.background,
+            (min_x, min_y, 20, Y + 40),
+            (255, 255, 255)
+        )
+        gfxdraw.box(
+            self.background,
+            (max_x, min_y, 20, Y + 40),
+            (255, 255, 255)
+        )
+        gfxdraw.box(
+            self.background,
+            (min_x, max_y, X + 40, 20),
+            (255, 255, 255)
+        )
+        
+        # Convertimos la imagen en un archivo
+        imgdata = pygame.surfarray.array3d(self.background)
+        imgdata = np.swapaxes(imgdata, 0, 1)
+        
+        if self.first:
+            self.image = plt.imshow(imgdata, animated=True)
+            self.first = False
+        else:
+            self.image.set_array(imgdata)
+
+        return self.image,
+
+    def run(self):
+        """
+            Mantiene actualizado el mapa
+        """
+        self.background = pygame.Surface((X + CAMERA_X, Y + CAMERA_Y))
+
+        fig = plt.figure()
+        ani = animation.FuncAnimation(fig, self.__draw, interval=50, blit=True)
+        plt.show()
 
 
 

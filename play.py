@@ -1,6 +1,5 @@
 # Utilidades
 import argparse
-from email.mime import image
 from random import randint
 
 # Juego
@@ -11,13 +10,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Corre un ciente de python.io',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument(
-        '-p', '--port',
-        type=int,
-        default='4269',
-        help='Puerto a traves del cual se ejecuta el cliente.',
-        metavar='PORT'
     )
     parser.add_argument(
         '-n', '--no-interface',
