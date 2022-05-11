@@ -1,8 +1,8 @@
 from uuid import UUID
 from random import randint
 from time import time, sleep
-from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
+from typing import List, Tuple, Dict, Set
 
 from src.snake import Snake
 from src.collisions import CollisionHandler
@@ -18,7 +18,6 @@ class Rate(object):
         Reference:
             https://github.com/strawlab/ros_comm/blob/master/clients/rospy/src/rospy/timer.py
     """
-    
     def __init__(self, hz: int):
         """
             Constructor.
@@ -73,6 +72,7 @@ class Game(object):
         self.players: Dict[UUID, Snake] = {}
         self.clients: Dict[str, str] = {}
         self.apples: Dict[UUID, Apple] = {}
+        self.dead: Set[UUID] = set()
 
         # Inicializamos el manejador de colisiones
         self.collisions = CollisionHandler()
@@ -116,9 +116,8 @@ class Game(object):
 
         # La serpiente muere si choca contra otra serpiente
         snake_collision : List[SnakeBoddy] = self.collisions.collision_with(head, 'Snake')
-        print(len(snake_collision))
         for obj in snake_collision:
-            if obj.snake_id not in self.players:
+            if obj.snake_id in self.dead:
                 self.collisions.delete(obj)
             elif str(obj.snake_id) != str(uuid):
                 return True
@@ -139,6 +138,7 @@ class Game(object):
 
             # Verificamos si el jugador perdio
             if self.is_loser(head, uuid):
+                self.dead.add(uuid)
                 losers.add(uuid)
                 continue
 
@@ -191,16 +191,6 @@ class Game(object):
             Mantiene el juego actualizandose indefinidamente
         """
         rate = Rate(RATE)
-        t0 = time()
-        count = 0
         while True: 
             self.update()
-
-            if count == 99:
-                tf = time()
-                print(f'Executting {count / (tf - t0)} steps by second.')
-                count = 0
-                t0 = tf
-            else:
-                count += 1
             rate.sleep()

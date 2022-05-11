@@ -20,6 +20,7 @@ from src.game import Game, GameData, Rate
 from src.__env__ import DELTA_TIME, X, CAMERA_X, Y, CAMERA_Y, CAPTION, \
     BG_COLOR, TURN_SPEED, RATE
 
+
 def __recvall(sock: socket.socket, n: int) -> bytearray:
     # Helper function to recv n bytes or return None if EOF is hit
     data = bytearray()
@@ -43,6 +44,7 @@ def recv_msg(sock: socket.socket) -> bytearray:
     msglen = struct.unpack('>I', raw_msglen)[0]
     # Read the message data
     return __recvall(sock, msglen)
+
 
 class Server(object):
     """
@@ -94,9 +96,7 @@ class Server(object):
                     Indica si se esta presionando la tecla w.
         """
         self.game.players[id].boosting = w
-        self.game.players[id].heading += (
-            (d - a) * TURN_SPEED * DELTA_TIME
-        )
+        self.game.players[id].heading += ((d - a) * TURN_SPEED * DELTA_TIME)
 
     def __process_client(self, conn: socket.socket, addr: str):
         """
@@ -152,7 +152,6 @@ class Server(object):
                 conn.close()
                 break
 
-
     def run(self):
         """
             Se mantiene escuchando a la espera de nuevos jugadores
@@ -172,7 +171,8 @@ class Client(object):
             server_ip: str, 
             server_port: int, 
             graphic: bool, 
-            color: Tuple[int, int, int]
+            color: Tuple[int, int, int],
+            image_filename: str
         ):
         self.server_ip = server_ip
         self.server_port = server_port
@@ -182,6 +182,7 @@ class Client(object):
         self.interface_socket.connect((self.server_ip, self.server_port))
         self.graphic = graphic 
         self.color = color
+        self.image_filename = image_filename
         self.game_over = 0
 
         # Iniciamos pygame
@@ -190,9 +191,9 @@ class Client(object):
         self.clock = pygame.time.Clock()
 
     def __draw(self, world: GameData):
-        # Si no se necesita grafico, entonces esta funcion no hace nada.
-        if not self.graphic: return 
-
+        """
+            Dibuja la interfaz del juego
+        """
         min_x = CAMERA_X / 2 - 25
         min_y = CAMERA_Y / 2 - 25
         max_x = min_x + X + 30
@@ -242,9 +243,10 @@ class Client(object):
         imgdata = pygame.surfarray.array3d(self.window)
         imgdata = np.swapaxes(imgdata, 0, 1)
         img = Image.fromarray(imgdata, 'RGB')
-        img.save('screenshot.png')
+        img.save(self.image_filename)
 
-        pygame.display.flip()
+        if self.graphic:
+            pygame.display.flip()
 
     def __run_interface(self):
         # Obtenemos los datos del mundo
@@ -276,9 +278,9 @@ class Client(object):
 
             self.game_over = 0
 
+            self.window = pygame.display.set_mode((CAMERA_X, CAMERA_Y))
+            self.background = pygame.Surface((X + CAMERA_X, Y + CAMERA_Y))
             if self.graphic:
-                self.window = pygame.display.set_mode((CAMERA_X, CAMERA_Y))
-                self.background = pygame.Surface((X + CAMERA_X, Y + CAMERA_Y))
                 pygame.display.set_caption(CAPTION)
                 
             # Creamos un hilo para la interfaz

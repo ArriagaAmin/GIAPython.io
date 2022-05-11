@@ -1,5 +1,6 @@
 # Utilidades
 import argparse
+from email.mime import image
 from random import randint
 
 # Juego
@@ -33,6 +34,13 @@ if __name__ == '__main__':
         metavar='CHANNEL'
     )
     parser.add_argument(
+        '-i', '--image',
+        type=str,
+        default='images/screenshot.png',
+        help='Archivo donde se guardara la iamgen de cada frame.',
+        metavar='FILENAME'
+    )
+    parser.add_argument(
         'server_ip',
         type=str,
         help='Server IP.',
@@ -50,7 +58,13 @@ if __name__ == '__main__':
     # Iniciamos el cliente
     if args.color == None: color = (randint(0, 255), randint(0, 255), randint(0, 255))
     else: color = tuple(args.color)
-    client = Client(args.server_ip, args.server_port, args.no_interface, color)
+    client = Client(
+        args.server_ip, 
+        args.server_port, 
+        args.no_interface, 
+        color,
+        args.image
+    )
 
     client.run()
 

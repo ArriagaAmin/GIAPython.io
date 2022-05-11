@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Tuple, Dict
 from src.GameObject import GameObject
 
@@ -7,7 +8,7 @@ class CollisionHandler:
     """
     def __init__(self):
         self.objects = {}
-        self.tiles : Dict[Tuple[int, int], Dict]= {}
+        self.tiles : Dict[Tuple[int, int], Dict[UUID, GameObject]]= {}
 
     def add(self, obj: GameObject):
         """
@@ -31,7 +32,9 @@ class CollisionHandler:
             Elimina un objeto
         """
         # Si no esta en el manejador, no se hace nada
-        if obj.id not in self.objects: return 
+        if obj.id not in self.objects: 
+            print('?')
+            return 
         
         for tile in self.objects[obj.id]:
             self.tiles[tile].pop(obj.id)

@@ -82,7 +82,7 @@ class Snake(object):
             new_radius = self.radius
 
         # Eliminamos el ultimo segmento de la serpiente
-        self.boddy.pop()
+        self.__pop_segment()
 
         # Si el radio cambio, tenemos que eliminar todos los segmentos del
         # manejador de colisiones y volverlos a agregarlos
@@ -98,10 +98,9 @@ class Snake(object):
         )
 
         # Creamos la cabeza
-        self.boddy.insert(
-            0,
-            SnakeBoddy(head_pos, self.radius, self.color, self.uuid)
-        )
+        head = SnakeBoddy(head_pos, self.radius, self.color, self.uuid)
+        self.boddy.insert(0, head)
+        self.collisions.add(head)
 
     def eat(self):
         """
