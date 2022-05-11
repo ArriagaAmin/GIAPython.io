@@ -2,6 +2,7 @@
 #   https://stackoverflow.com/questions/17667903/python-socket-receive-large-amount-of-data
 
 # Utilities
+import math
 import socket
 import struct
 import pickle
@@ -11,8 +12,8 @@ import matplotlib.animation as animation
 from PIL import Image
 from uuid import uuid4
 from typing import Tuple 
-from random import randint
 from threading import Thread
+from random import randint, random
 
 # Game
 import pygame
@@ -72,11 +73,12 @@ class Server(object):
 
         # Obtenemos una posicion aleatoria
         new_position = (
-            randint(CAMERA_X // 2 + 10, CAMERA_X // 2 + X // 2),
-            randint(CAMERA_Y // 2 + 10, CAMERA_Y // 2 + Y)
+            randint(CAMERA_X // 2 + 100, CAMERA_X // 2 + X - 100),
+            randint(CAMERA_Y // 2 + 100, CAMERA_Y // 2 + Y - 100)
         )
         # Creamos una nueva serpiente
         new_snake = Snake(new_position, color, self.game.collisions, uuid)
+        new_snake.heading = randint(0, 360)
         # Agregamos al jugador
         self.game.players[str(uuid)] = new_snake
         self.game.clients[str(uuid)] = addr

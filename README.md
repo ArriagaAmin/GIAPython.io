@@ -49,10 +49,9 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -n, --no-interface    No se muestra una interfaz. (default: True)
+  -n, --no-interface    No se muestra una interfaz.
   -c CHANNEL CHANNEL CHANNEL, --color CHANNEL CHANNEL CHANNEL
                         Permite establecer un color a la serpiente. 
-                        (default: None)
   -i FILENAME, --image FILENAME
                         Archivo donde se guardara la iamgen de cada frame. 
                         (default: images/screenshot.png)
